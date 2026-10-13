@@ -1,0 +1,91 @@
+@*
+ * Copyright 2026 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ *@
+
+@import models.{AddressResult, AddressSearch, SearchType}
+@import viewmodels.InputWidth.Full
+
+@this(
+    layout: templates.Layout,
+    formHelper: FormWithCSRF,
+    govukButton: GovukButton,
+    govukErrorSummary: GovukErrorSummary,
+    govukInput: GovukInput,
+    govukRadios: GovukRadios
+)
+
+@(form: Form[AddressSearch], results: Option[Seq[AddressResult]], lookupFailed: Boolean)(implicit request: Request[_], messages: Messages)
+
+@layout(pageTitle = title(form, messages("addressSearch.title")), showBackLink = false) {
+
+    @formHelper(action = routes.IndexController.onSubmit(), Symbol("autoComplete") -> "off") {
+        @if(form.errors.nonEmpty) {
+            @govukErrorSummary(ErrorSummaryViewModel(form, errorLinkOverrides = Map("searchType" -> "searchType_0")))
+        }
+
+        @govukRadios(
+            RadiosViewModel(
+                field = form("searchType"),
+                legend = LegendViewModel(messages("addressSearch.searchType.heading")).asPageHeading(),
+                items = SearchType.options
+            )
+        )
+
+        @govukInput(
+            InputViewModel(
+                field = form("query"),
+                label = LabelViewModel(messages("addressSearch.query.label"))
+            )
+            .withHint(HintViewModel(messages("addressSearch.query.hint")))
+            .withWidth(Full)
+        )
+
+        @govukButton(
+            ButtonViewModel(messages("addressSearch.submit"))
+        )
+    }
+
+    @if(lookupFailed) {
+        <p class="govuk-error-message">@messages("addressSearch.error.unavailable")</p>
+    }
+
+    @for(addresses <- results) {
+        <h2 class="govuk-heading-l">@messages("addressSearch.results.heading")</h2>
+
+        @if(addresses.isEmpty) {
+            <p class="govuk-body">@messages("addressSearch.results.empty")</p>
+        } else {
+            <ul class="govuk-list">
+            @for(result <- addresses) {
+                <li class="govuk-!-margin-bottom-4">
+                    @for(organisation <- result.organisation) {
+                        <p class="govuk-body govuk-!-margin-bottom-0">@organisation</p>
+                    }
+                    @for(poBox <- result.poBox) {
+                        <p class="govuk-body govuk-!-margin-bottom-0">@poBox</p>
+                    }
+                    <p class="govuk-body">
+                    @for(line <- result.address.lines) {
+                        @line<br>
+                    }
+                    @result.address.town<br>
+                    @result.address.postcode
+                    </p>
+                </li>
+            }
+            </ul>
+        }
+    }
+}
